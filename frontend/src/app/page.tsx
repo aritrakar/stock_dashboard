@@ -20,11 +20,13 @@ const Home: React.FC = () => {
   }, [symbol]);
 
   const fetchHistoricalData = async () => {
+    if (!symbol || symbol.length !== 4) {
+      return;
+    }
     try {
       const response = await axios.get<StockData[]>(`/api/historical`, {
         params: { symbol },
       });
-      console.log(response.data)
       setData(response.data);
     } catch (error) {
       if (axios.isAxiosError(error)) {
