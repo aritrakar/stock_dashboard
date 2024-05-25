@@ -41,7 +41,7 @@ const Home: React.FC = () => {
   const [historicalData, setHistoricalData] = useState<StockData[]>([]);
   const [forecastData, setForecastData] = useState<StockData[]>([]);
   const [symbol, setSymbol] = useState('AAPL');
-  const [interval, setInterval] = useState('1m');  // Default interval
+  const [interval, setInterval] = useState('1d');  // Default interval
   const [error, setError] = useState<string | null>(null);
   const [stockInfo, setStockInfo] = useState<StockInfo | null>(null);
 
@@ -140,7 +140,7 @@ const Home: React.FC = () => {
           <select onChange={(e) => setInterval(e.target.value)} value={interval} style={{ marginRight: '10px', padding: '5px', borderRadius: '4px', border: '1px solid #ccc' }}>
             <option value="1m">1 Minute</option>
             <option value="5m">5 Minutes</option>
-            <option value="30m">30 Minutes</option>
+            <option value="15m">15 Minutes</option>
             <option value="1h">1 Hour</option>
             <option value="1d">1 Day</option>
           </select>

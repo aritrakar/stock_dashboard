@@ -7,6 +7,10 @@ import redis
 import json
 import os
 from io import StringIO
+import datetime
+from typing import Any
+
+CACHE_DURATION = 5 * 60  # 5 minutes
 
 app = Flask(__name__)
 CORS(app)
@@ -16,15 +20,53 @@ redis_host = os.getenv('REDIS_HOST', 'localhost')
 redis_port = os.getenv('REDIS_PORT', 6379)
 r = redis.Redis(host=redis_host, port=int(redis_port), db=0)
 
-def fetch_data(symbol):
-    ticker = yf.Ticker(symbol)
-    hist = ticker.history(period="1y")
-    # hist = ticker.history(start="2024-05-02", end="2024-05-07", interval="1m")
+# def fetch_data(symbol, interval):
+#     hist = yf.download(tickers=symbol, period="1y", interval=interval)
+
+#     # Clean the data
+#     hist = hist.reset_index()
+#     hist = hist.rename(columns={
+#         'Datetime': 'date', 
+#         'Date': 'date',
+#         'Open': 'open', 
+#         'High': 'high', 
+#         'Low': 'low', 
+#         'Close': 'close', 
+#         'Volume': 'volume'
+#     })
+#     return hist
+
+import datetime
+
+def fetch_data(symbol, interval):
+    # Map of Yahoo Finance API intervals to number of days to fetch
+    interval_map = {
+        '1m': 1,
+        '5m': 1,
+        '15m': 10,
+        '30m': 60,
+        '1h': 60,
+        '1d': 365
+    }
+    
+    end_date = datetime.datetime.now()
+    start_date = end_date - datetime.timedelta(days=interval_map.get(interval, 30))
+
+    hist: pd.DataFrame | Any = yf.download(tickers=symbol, start=start_date, end=end_date, interval=interval)
 
     # Clean the data
     hist = hist.reset_index()
-    hist = hist.rename(columns={'Date': 'date', 'Open': 'open', 'High': 'high', 'Low': 'low', 'Close': 'close', 'Volume': 'volume'})
+    hist = hist.rename(columns={
+        'Datetime': 'date',
+        'Date': 'date',
+        'Open': 'open',
+        'High': 'high',
+        'Low': 'low',
+        'Close': 'close',
+        'Volume': 'volume'
+    })
     return hist
+
 
 @app.route('/historical', methods=['GET'])
 def get_historical_data():
@@ -38,14 +80,9 @@ def get_historical_data():
         print("CACHE HIT")
         data = pd.read_json(StringIO(cached_data.decode('utf-8')), convert_dates=True)
     else:
-        data = fetch_data(symbol)
-        r.set(cache_key, data.to_json(), ex=3600)  # Cache for 1 hour
+        data = fetch_data(symbol, interval)
+        r.set(cache_key, data.to_json(), ex=CACHE_DURATION)  # Cache for 5 minutes
         print("STORED IN CACHE")
-
-    # data = fetch_data(symbol)
-
-    # print(data.columns)
-    # print(data.head())
 
     return data.to_json(orient='records')
 
@@ -62,11 +99,9 @@ def forecast():
         print("CACHE HIT")
         data = pd.read_json(StringIO(cached_data.decode('utf-8')), convert_dates=True)
     else:
-        data = fetch_data(symbol)
-        r.set(cache_key, data.to_json(), ex=3600)  # Cache for 1 hour
+        data = fetch_data(symbol, interval)
+        r.set(cache_key, data.to_json(), ex=CACHE_DURATION)  # Cache for 5 minutes
         print("STORED IN CACHE")
-
-    # data = fetch_data(symbol)
 
     data['ds'] = pd.to_datetime(data['date']).dt.tz_localize(None)  # Remove timezone information
     data['y'] = data['close']
@@ -80,7 +115,7 @@ def forecast():
     # Fit the model
     model = Prophet()
     model.fit(data[['ds', 'y']])
-    future = model.make_future_dataframe(periods=30)  # TODO: Make this configurable
+    future = model.make_future_dataframe(periods=30)  # Forecast 30 periods into the future
     forecast = model.predict(future)
 
     # Convert to original format
@@ -90,16 +125,13 @@ def forecast():
     # print(forecast)
     return forecast.to_json(orient='records')
 
-from pprint import pprint
 @app.route('/stock-info', methods=['GET'])
 def stock_info():
     symbol = request.args.get('symbol')
     ticker = yf.Ticker(symbol)
     info = ticker.info
-    # pprint(info)
     stock_info = {
         'name': info.get('longName'),
-        # 'description': info.get('longBusinessSummary'),
         'sector': info.get('sector'),
         'website': info.get('website'),
         'financials': {
