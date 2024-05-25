@@ -29,7 +29,7 @@ def fetch_data(symbol):
 @app.route('/historical', methods=['GET'])
 def get_historical_data():
     symbol = request.args.get('symbol')
-    interval = request.args.get('interval', '1d')  # Default to '1d' if not provided
+    # interval = request.args.get('interval', '1d')  # Default to '1d' if not provided
 
     # Check if data is cached
     # cache_key = f"{symbol}_{interval}"
@@ -42,11 +42,9 @@ def get_historical_data():
 
     data = fetch_data(symbol)
 
-    print(data.columns)
-    print(data.head())
+    # print(data.columns)
+    # print(data.head())
 
-    # Prepare data for response
-    # data = data.reset_index().rename(columns={'Date': 'date', 'Open': 'open', 'High': 'high', 'Low': 'low', 'Close': 'close', 'Volume': 'volume'})
     return data.to_json(orient='records')
 
 @app.route('/forecast', methods=['POST'])
@@ -66,8 +64,6 @@ def forecast():
 
     data = fetch_data(symbol)
 
-    # print(data.columns)
-    
     data['ds'] = pd.to_datetime(data['date']).dt.tz_localize(None)  # Remove timezone information
     data['y'] = data['close']
 
@@ -78,21 +74,43 @@ def forecast():
     data = data.sort_values(by='ds')
 
     # Fit the model
-    # model = Prophet(growth='logistic')
-    # model.fit(data[['ds', 'y', 'cap', 'floor']])
     model = Prophet()
     model.fit(data[['ds', 'y']])
     future = model.make_future_dataframe(periods=30)  # TODO: Make this configurable
-    # future['cap'] = data['cap'].max()
-    # future['floor'] = 0
     forecast = model.predict(future)
 
     # Convert to original format
     forecast = forecast[['ds', 'yhat']]  # Not included: 'yhat_lower', 'yhat_upper'
     forecast = forecast.rename(columns={'ds': 'date', 'yhat': 'close'})
 
-    print(forecast)
+    # print(forecast)
     return forecast.to_json(orient='records')
+
+from pprint import pprint
+@app.route('/stock-info', methods=['GET'])
+def stock_info():
+    symbol = request.args.get('symbol')
+    ticker = yf.Ticker(symbol)
+    info = ticker.info
+    # pprint(info)
+    stock_info = {
+        'name': info.get('longName'),
+        # 'description': info.get('longBusinessSummary'),
+        'sector': info.get('sector'),
+        'website': info.get('website'),
+        'financials': {
+            'marketCap': info.get('marketCap'),
+            'ebitda': info.get('ebitda'),
+            'peRatio': info.get('trailingPE'),
+            'close': info.get('previousClose'),
+            'open': info.get('open'),
+            'high': info.get('dayHigh'),
+            'low': info.get('dayLow'),
+            'volume': info.get('volume'),
+            'pctChange': info.get('regularMarketChangePercent'),
+        }
+    }
+    return jsonify(stock_info)
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5000, debug=True)
