@@ -1,11 +1,12 @@
 from flask import Flask, request, jsonify
 from flask_cors import CORS
-import requests
+import yfinance as yf
 import pandas as pd
 from prophet import Prophet
 import redis
 import json
 import os
+from io import StringIO
 
 app = Flask(__name__)
 CORS(app)
@@ -15,48 +16,83 @@ redis_host = os.getenv('REDIS_HOST', 'localhost')
 redis_port = os.getenv('REDIS_PORT', 6379)
 r = redis.Redis(host=redis_host, port=int(redis_port), db=0)
 
-# TODO: Read from environment variable
-API_KEY = '7GK5ACZ7DFZWCE46'
-BASE_URL = 'https://www.alphavantage.co/query'
-
 def fetch_data(symbol):
-    URL = f'{BASE_URL}?function=TIME_SERIES_DAILY&symbol={symbol}&apikey={API_KEY}'
-    response = requests.get(URL)
-    data = response.json()
-    print("GOT DATA FOR SYMBOL: ", symbol)
-    return data
+    ticker = yf.Ticker(symbol)
+    hist = ticker.history(period="1y")
+    # hist = ticker.history(start="2024-05-02", end="2024-05-07", interval="1m")
+
+    # Clean the data
+    hist = hist.reset_index()
+    hist = hist.rename(columns={'Date': 'date', 'Open': 'open', 'High': 'high', 'Low': 'low', 'Close': 'close', 'Volume': 'volume'})
+    return hist
 
 @app.route('/historical', methods=['GET'])
 def get_historical_data():
     symbol = request.args.get('symbol')
-    cached_data = r.get(symbol)
-    if cached_data:
-        data = json.loads(cached_data)
-    else:
-        data = fetch_data(symbol)
-        r.set(symbol, json.dumps(data), ex=3600)  # Cache for 1 hour
-    df = pd.DataFrame.from_dict(data['Time Series (Daily)'], orient='index')
-    df = df.reset_index().rename(columns={'index': 'date', '1. open': 'open', '2. high': 'high', '3. low': 'low', '4. close': 'close', '5. volume': 'volume'})
-    return df.to_json(orient='records')
+    interval = request.args.get('interval', '1d')  # Default to '1d' if not provided
+
+    # Check if data is cached
+    # cache_key = f"{symbol}_{interval}"
+    # cached_data = r.get(cache_key)
+    # if cached_data:
+    #     data = pd.read_json(StringIO(cached_data.decode('utf-8')), convert_dates=True)
+    # else:
+    #     data = fetch_data(symbol)
+    #     r.set(cache_key, data.to_json(), ex=3600)  # Cache for 1 hour
+
+    data = fetch_data(symbol)
+
+    print(data.columns)
+    print(data.head())
+
+    # Prepare data for response
+    # data = data.reset_index().rename(columns={'Date': 'date', 'Open': 'open', 'High': 'high', 'Low': 'low', 'Close': 'close', 'Volume': 'volume'})
+    return data.to_json(orient='records')
 
 @app.route('/forecast', methods=['POST'])
 def forecast():
+    print("FORECASTING")
     symbol = request.json['symbol']
-    cached_data = r.get(symbol)
-    if cached_data:
-        data = json.loads(cached_data)
-    else:
-        data = fetch_data(symbol)
-        r.set(symbol, json.dumps(data), ex=3600)  # Cache for 1 hour
-    df = pd.DataFrame.from_dict(data['Time Series (Daily)'], orient='index')
-    df = df.reset_index().rename(columns={'index': 'date', '1. open': 'open', '2. high': 'high', '3. low': 'low', '4. close': 'close', '5. volume': 'volume'})
-    df['ds'] = pd.to_datetime(df['date'])
-    df['y'] = df['close']
+    # interval = request.json.get('interval', '1d')  # Default to '1d' if not provided
+
+    # Check if data is cached
+    # cache_key = f"{symbol}_{interval}"
+    # cached_data = r.get(cache_key)
+    # if cached_data:
+    #     data = pd.read_json(StringIO(cached_data.decode('utf-8')), convert_dates=True)
+    # else:
+    #     data = fetch_data(symbol)
+    #     r.set(cache_key, data.to_json(), ex=3600)  # Cache for 1 hour
+
+    data = fetch_data(symbol)
+
+    # print(data.columns)
+    
+    data['ds'] = pd.to_datetime(data['date']).dt.tz_localize(None)  # Remove timezone information
+    data['y'] = data['close']
+
+    # Remove negative values from the dataset
+    data = data[data['y'] >= 0]
+
+    # Ensure data is sorted by date
+    data = data.sort_values(by='ds')
+
+    # Fit the model
+    # model = Prophet(growth='logistic')
+    # model.fit(data[['ds', 'y', 'cap', 'floor']])
     model = Prophet()
-    model.fit(df[['ds', 'y']])
-    future = model.make_future_dataframe(periods=30)
+    model.fit(data[['ds', 'y']])
+    future = model.make_future_dataframe(periods=30)  # TODO: Make this configurable
+    # future['cap'] = data['cap'].max()
+    # future['floor'] = 0
     forecast = model.predict(future)
+
+    # Convert to original format
+    forecast = forecast[['ds', 'yhat']]  # Not included: 'yhat_lower', 'yhat_upper'
+    forecast = forecast.rename(columns={'ds': 'date', 'yhat': 'close'})
+
+    print(forecast)
     return forecast.to_json(orient='records')
 
 if __name__ == '__main__':
-    app.run(host='0.0.0.0', port=5000)
+    app.run(host='0.0.0.0', port=5000, debug=True)

@@ -5,21 +5,7 @@ const nextConfig = {
         return [
             {
                 source: '/api/:path*',
-                destination: 'http://backend:5000/:path*', // Backend URL
-                // headers: [
-                //     {
-                //         key: 'Access-Control-Allow-Origin',
-                //         value: '*',
-                //     },
-                //     {
-                //         key: 'Access-Control-Allow-Methods',
-                //         value: 'GET, POST, PUT, DELETE, OPTIONS',
-                //     },
-                //     {
-                //         key: 'Access-Control-Allow-Headers',
-                //         value: 'X-Requested-With, Content-Type, Authorization',
-                //     },
-                // ],
+                destination: 'http://backend:5000/:path*', // Backend URL. Change to `backend` when using Docker container for backend
             },
         ];
     },

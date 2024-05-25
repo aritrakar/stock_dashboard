@@ -10,9 +10,9 @@ interface StockData {
 }
 
 const Home: React.FC = () => {
-  const [data, setData] = useState<StockData[]>([]);
+  const [historicalData, setHistoricalData] = useState<StockData[]>([]);
+  const [forecastData, setForecastData] = useState<StockData[]>([]);
   const [symbol, setSymbol] = useState('AAPL');
-  const [forecast, setForecast] = useState<StockData[]>([]);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -20,18 +20,19 @@ const Home: React.FC = () => {
   }, [symbol]);
 
   const fetchHistoricalData = async () => {
-    if (!symbol || symbol.length !== 4) {
-      return;
-    }
     try {
       const response = await axios.get<StockData[]>(`/api/historical`, {
         params: { symbol },
       });
-      setData(response.data);
+      setHistoricalData(response.data);
+      setForecastData([]);  // Clear forecast data when fetching new historical data
     } catch (error) {
       if (axios.isAxiosError(error)) {
         console.error("Axios error fetching historical data:", error.message);
         setError("Error fetching historical data: " + error.message);
+        if (error.response) {
+          console.error("Response data:", error.response.data);
+        }
       } else {
         console.error("Unexpected error fetching historical data:", error);
         setError("Unexpected error fetching historical data.");
@@ -46,11 +47,15 @@ const Home: React.FC = () => {
           'Content-Type': 'application/json',
         },
       });
-      setForecast(response.data);
+      // console.log("Got forecast data:", response.data)
+      setForecastData(response.data);
     } catch (error) {
       if (axios.isAxiosError(error)) {
         console.error("Axios error fetching forecast data:", error.message);
         setError("Error fetching forecast data: " + error.message);
+        if (error.response) {
+          console.error("Response data:", error.response.data);
+        }
       } else {
         console.error("Unexpected error fetching forecast data:", error);
         setError("Unexpected error fetching forecast data.");
@@ -68,8 +73,7 @@ const Home: React.FC = () => {
       />
       <button onClick={handleForecast}>Get Forecast</button>
       {error && <p style={{ color: 'red' }}>{error}</p>}
-      <StockChart data={data} />
-      {forecast.length > 0 && <StockChart data={forecast} />}
+      <StockChart historicalData={historicalData} forecastData={forecastData} />
     </div>
   );
 };
