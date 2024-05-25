@@ -18,15 +18,6 @@ interface StockInfo {
   financials: {
     [key: string]:  number;
   };
-  // marketCap: number;
-  // ebitda: number;
-  // peRatio: number;
-  // close: object,
-  //       'open': info.get('open'),
-  //       'high': info.get('dayHigh'),
-  //       'low': info.get('dayLow'),
-  //       'volume': info.get('volume'),
-  //       'pctChange'
 }
 
 const formatNumber = (marketCap: number) => {
@@ -43,7 +34,7 @@ const formatNumber = (marketCap: number) => {
 }
 
 const formatWebsite = (website: string) => {
-  return website.replace(/(^\w+:|^)\/\//, '');
+  return website?.replace(/(^\w+:|^)\/\//, '') ?? '';
 }
 
 const Home: React.FC = () => {

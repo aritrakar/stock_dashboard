@@ -29,18 +29,20 @@ def fetch_data(symbol):
 @app.route('/historical', methods=['GET'])
 def get_historical_data():
     symbol = request.args.get('symbol')
-    # interval = request.args.get('interval', '1d')  # Default to '1d' if not provided
+    interval = request.args.get('interval', '1d')  # Default to '1d' if not provided
 
     # Check if data is cached
-    # cache_key = f"{symbol}_{interval}"
-    # cached_data = r.get(cache_key)
-    # if cached_data:
-    #     data = pd.read_json(StringIO(cached_data.decode('utf-8')), convert_dates=True)
-    # else:
-    #     data = fetch_data(symbol)
-    #     r.set(cache_key, data.to_json(), ex=3600)  # Cache for 1 hour
+    cache_key = f"{symbol}_{interval}"
+    cached_data = r.get(cache_key)
+    if cached_data:
+        print("CACHE HIT")
+        data = pd.read_json(StringIO(cached_data.decode('utf-8')), convert_dates=True)
+    else:
+        data = fetch_data(symbol)
+        r.set(cache_key, data.to_json(), ex=3600)  # Cache for 1 hour
+        print("STORED IN CACHE")
 
-    data = fetch_data(symbol)
+    # data = fetch_data(symbol)
 
     # print(data.columns)
     # print(data.head())
@@ -51,18 +53,20 @@ def get_historical_data():
 def forecast():
     print("FORECASTING")
     symbol = request.json['symbol']
-    # interval = request.json.get('interval', '1d')  # Default to '1d' if not provided
+    interval = request.json.get('interval', '1d')  # Default to '1d' if not provided
 
     # Check if data is cached
-    # cache_key = f"{symbol}_{interval}"
-    # cached_data = r.get(cache_key)
-    # if cached_data:
-    #     data = pd.read_json(StringIO(cached_data.decode('utf-8')), convert_dates=True)
-    # else:
-    #     data = fetch_data(symbol)
-    #     r.set(cache_key, data.to_json(), ex=3600)  # Cache for 1 hour
+    cache_key = f"{symbol}_{interval}"
+    cached_data = r.get(cache_key)
+    if cached_data:
+        print("CACHE HIT")
+        data = pd.read_json(StringIO(cached_data.decode('utf-8')), convert_dates=True)
+    else:
+        data = fetch_data(symbol)
+        r.set(cache_key, data.to_json(), ex=3600)  # Cache for 1 hour
+        print("STORED IN CACHE")
 
-    data = fetch_data(symbol)
+    # data = fetch_data(symbol)
 
     data['ds'] = pd.to_datetime(data['date']).dt.tz_localize(None)  # Remove timezone information
     data['y'] = data['close']
