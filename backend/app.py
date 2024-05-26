@@ -20,39 +20,18 @@ redis_host = os.getenv('REDIS_HOST', 'localhost')
 redis_port = os.getenv('REDIS_PORT', 6379)
 r = redis.Redis(host=redis_host, port=int(redis_port), db=0)
 
-# def fetch_data(symbol, interval):
-#     hist = yf.download(tickers=symbol, period="1y", interval=interval)
+def fetch_data(symbol, interval, start_date=None, end_date=None):
+    if end_date is None:
+        end_date = datetime.datetime.now()
+    if start_date is None:
+        if interval == '1m':
+            start_date = end_date - datetime.timedelta(days=30)
+        elif interval in ['2m', '5m', '15m', '30m', '60m']:
+            start_date = end_date - datetime.timedelta(days=60)
+        else:
+            start_date = end_date - datetime.timedelta(days=365)
 
-#     # Clean the data
-#     hist = hist.reset_index()
-#     hist = hist.rename(columns={
-#         'Datetime': 'date', 
-#         'Date': 'date',
-#         'Open': 'open', 
-#         'High': 'high', 
-#         'Low': 'low', 
-#         'Close': 'close', 
-#         'Volume': 'volume'
-#     })
-#     return hist
-
-import datetime
-
-def fetch_data(symbol, interval):
-    # Map of Yahoo Finance API intervals to number of days to fetch
-    interval_map = {
-        '1m': 1,
-        '5m': 1,
-        '15m': 10,
-        '30m': 60,
-        '1h': 60,
-        '1d': 365
-    }
-    
-    end_date = datetime.datetime.now()
-    start_date = end_date - datetime.timedelta(days=interval_map.get(interval, 30))
-
-    hist: pd.DataFrame | Any = yf.download(tickers=symbol, start=start_date, end=end_date, interval=interval)
+    hist = yf.download(tickers=symbol, start=start_date, end=end_date, interval=interval)
 
     # Clean the data
     hist = hist.reset_index()
@@ -67,20 +46,27 @@ def fetch_data(symbol, interval):
     })
     return hist
 
-
 @app.route('/historical', methods=['GET'])
 def get_historical_data():
     symbol = request.args.get('symbol')
     interval = request.args.get('interval', '1d')  # Default to '1d' if not provided
+    start_date = request.args.get('start_date')
+    end_date = request.args.get('end_date')
+
+    # Parse dates if provided
+    if start_date:
+        start_date = datetime.datetime.strptime(start_date, '%Y-%m-%d')
+    if end_date:
+        end_date = datetime.datetime.strptime(end_date, '%Y-%m-%d')
 
     # Check if data is cached
-    cache_key = f"{symbol}_{interval}"
+    cache_key = f"{symbol}_{interval}_{start_date}_{end_date}"
     cached_data = r.get(cache_key)
     if cached_data:
         print("CACHE HIT")
         data = pd.read_json(StringIO(cached_data.decode('utf-8')), convert_dates=True)
     else:
-        data = fetch_data(symbol, interval)
+        data = fetch_data(symbol, interval, start_date, end_date)
         r.set(cache_key, data.to_json(), ex=CACHE_DURATION)  # Cache for 5 minutes
         print("STORED IN CACHE")
 
@@ -91,15 +77,23 @@ def forecast():
     print("FORECASTING")
     symbol = request.json['symbol']
     interval = request.json.get('interval', '1d')  # Default to '1d' if not provided
+    start_date = request.json.get('start_date')
+    end_date = request.json.get('end_date')
+
+    # Parse dates if provided
+    if start_date:
+        start_date = datetime.datetime.strptime(start_date, '%Y-%m-%d')
+    if end_date:
+        end_date = datetime.datetime.strptime(end_date, '%Y-%m-%d')
 
     # Check if data is cached
-    cache_key = f"{symbol}_{interval}"
+    cache_key = f"{symbol}_{interval}_{start_date}_{end_date}"
     cached_data = r.get(cache_key)
     if cached_data:
         print("CACHE HIT")
         data = pd.read_json(StringIO(cached_data.decode('utf-8')), convert_dates=True)
     else:
-        data = fetch_data(symbol, interval)
+        data = fetch_data(symbol, interval, start_date, end_date)
         r.set(cache_key, data.to_json(), ex=CACHE_DURATION)  # Cache for 5 minutes
         print("STORED IN CACHE")
 
@@ -122,7 +116,6 @@ def forecast():
     forecast = forecast[['ds', 'yhat']]  # Not included: 'yhat_lower', 'yhat_upper'
     forecast = forecast.rename(columns={'ds': 'date', 'yhat': 'close'})
 
-    # print(forecast)
     return forecast.to_json(orient='records')
 
 @app.route('/stock-info', methods=['GET'])

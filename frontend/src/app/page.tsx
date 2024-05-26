@@ -4,6 +4,8 @@ import { useState, useEffect, useCallback } from 'react';
 import axios from 'axios';
 import StockChart from './components/StockChart';
 import { debounce } from 'lodash';
+import DatePicker from 'react-datepicker';
+import 'react-datepicker/dist/react-datepicker.css';
 
 interface StockData {
   date: string;
@@ -16,15 +18,14 @@ interface StockInfo {
   sector: string;
   website: string;
   financials: {
-    [key: string]:  number;
+    [key: string]: number;
   };
 }
 
 const formatNumber = (marketCap: number) => {
   if (marketCap >= 1_000_000_000_000) {
     return `${(marketCap / 1_000_000_000_000).toFixed(2)}T`;
-  }
-  else if (marketCap >= 1_000_000_000) {
+  } else if (marketCap >= 1_000_000_000) {
     return `${(marketCap / 1_000_000_000).toFixed(2)}B`;
   } else if (marketCap >= 1_000_000) {
     return `${(marketCap / 1_000_000).toFixed(2)}M`;
@@ -42,13 +43,20 @@ const Home: React.FC = () => {
   const [forecastData, setForecastData] = useState<StockData[]>([]);
   const [symbol, setSymbol] = useState('AAPL');
   const [interval, setInterval] = useState('1d');  // Default interval
+  const [startDate, setStartDate] = useState<Date | null>(null);
+  const [endDate, setEndDate] = useState<Date | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [stockInfo, setStockInfo] = useState<StockInfo | null>(null);
 
   const fetchHistoricalData = async () => {
     try {
       const response = await axios.get<StockData[]>(`/api/historical`, {
-        params: { symbol, interval },
+        params: { 
+          symbol, 
+          interval, 
+          start_date: startDate?.toISOString().split('T')[0],
+          end_date: endDate?.toISOString().split('T')[0]
+        },
       });
       setHistoricalData(response.data);
       setForecastData([]);  // Clear forecast data when fetching new historical data
@@ -86,9 +94,37 @@ const Home: React.FC = () => {
     }
   };
 
+  const handleSymbolChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setSymbol(e.target.value);
+  };
+
+  // Create a debounced version of the fetch functions
+  const debouncedFetchData = useCallback(
+    debounce(() => {
+      fetchHistoricalData();
+      fetchStockInfo();
+    }, 500), // Adjust the delay as needed
+    [symbol, interval, startDate, endDate]
+  );
+
+  useEffect(() => {
+    debouncedFetchData();
+    // Cancel the debounced function call if the component unmounts
+    return () => {
+      debouncedFetchData.cancel();
+    };
+  }, [symbol, interval, startDate, endDate, debouncedFetchData]);
+
   const handleForecast = async () => {
     try {
-      const response = await axios.post<StockData[]>('/api/forecast', { symbol, interval }, {
+      const response = await axios.post<StockData[]>('/api/forecast', 
+        { 
+          symbol, 
+          interval, 
+          start_date: startDate?.toISOString().split('T')[0],
+          end_date: endDate?.toISOString().split('T')[0]
+        },
+        {
         headers: {
           'Content-Type': 'application/json',
         },
@@ -108,32 +144,14 @@ const Home: React.FC = () => {
     }
   };
 
-  // Create a debounced version of the fetch functions
-  // to avoid making too many requests
-  const debouncedFetchData = useCallback(
-    debounce(() => {
-      fetchHistoricalData();
-      fetchStockInfo();
-    }, 500), // Adjust the delay as needed
-    [symbol, interval]
-  );
-
-  useEffect(() => {
-    debouncedFetchData();
-    // Cancel the debounced function call if the component unmounts
-    return () => {
-      debouncedFetchData.cancel();
-    };
-  }, [symbol, interval, debouncedFetchData]);
-
   return (
-    <div style={{ display: 'flex', height: '100vh' }}>
+    <div style={{ display: 'flex', height: '100vh', padding: '20px' }}>
       <div style={{ flex: 3, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '20px' }}>
         <div style={{ marginBottom: '20px', textAlign: 'center' }}>
           <input
             type="text"
             value={symbol}
-            onChange={(e) => setSymbol(e.target.value)}
+            onChange={handleSymbolChange}
             placeholder="Enter stock symbol"
             style={{ marginRight: '10px', padding: '5px', borderRadius: '4px', border: '1px solid #ccc' }}
           />
@@ -141,9 +159,26 @@ const Home: React.FC = () => {
             <option value="1m">1 Minute</option>
             <option value="5m">5 Minutes</option>
             <option value="15m">15 Minutes</option>
-            <option value="1h">1 Hour</option>
+            <option value="30m">30 Minutes</option>
+            <option value="60m">1 Hour</option>
             <option value="1d">1 Day</option>
           </select>
+          <div style={{ display: 'inline-block', marginRight: '10px' }}>
+            <DatePicker
+              selected={startDate}
+              onChange={(date: Date) => setStartDate(date)}
+              placeholderText="Start Date"
+              dateFormat="yyyy-MM-dd"
+            />
+          </div>
+          <div style={{ display: 'inline-block', marginRight: '10px' }}>
+            <DatePicker
+              selected={endDate}
+              onChange={(date: Date) => setEndDate(date)}
+              placeholderText="End Date"
+              dateFormat="yyyy-MM-dd"
+            />
+          </div>
           <button onClick={handleForecast} style={{ padding: '5px 10px', borderRadius: '4px', backgroundColor: '#007bff', color: '#fff', border: 'none' }}>Generate</button>
         </div>
         {error && <p style={{ color: 'red' }}>{error}</p>}
