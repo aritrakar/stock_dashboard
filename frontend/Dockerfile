@@ -18,5 +18,4 @@ COPY . .
 EXPOSE 3000
 
 # Run the app when the container launches
-# CMD ["npm", "run", "dev"] # Use for dev only
-CMD ["npm", "run", "build" "&&", "npm", "run", "start"]
+CMD ["npm", "run", "dev"]
