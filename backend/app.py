@@ -103,6 +103,10 @@ def forecast():
     indicators = request.json.get('indicators', [])
     forecast_period = request.json.get('forecast_period', 30)
 
+    # Handle negative forecast periods
+    if forecast_period < 0:
+        forecast_period = 0
+
     # Parse dates if provided
     if start_date:
         start_date = datetime.datetime.strptime(start_date, '%Y-%m-%d')
@@ -133,13 +137,12 @@ def forecast():
     future = model.make_future_dataframe(periods=forecast_period)
     forecast = model.predict(future)
 
-    # Remove negative values from the forecast by setting them to adjacent values
-    # forecast['yhat'] = forecast['yhat'].apply(lambda x: max(x, 0))
-
     # Handle potential edge cases with negative values
-    # for i in range(1, len(forecast)):
-    #     if forecast.loc[i, 'yhat'] < 0:
-    #         forecast.loc[i, 'yhat'] = forecast.loc[i - 1, 'yhat']    
+    # NOTE: Normally, this would not be necessary because the model
+    # should not predict negative values in the first place.
+    for i in range(1, len(forecast)):
+        if forecast.loc[i, 'yhat'] < 0:
+            forecast.loc[i, 'yhat'] = forecast.loc[i - 1, 'yhat']    
 
     # Convert to original format
     forecast = forecast[['ds', 'yhat']]  # Not included: 'yhat_lower', 'yhat_upper'
