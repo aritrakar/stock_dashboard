@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, use } from 'react';
 import axios from 'axios';
 import StockChart from './components/StockChart';
 import { debounce } from 'lodash';
@@ -65,6 +65,7 @@ const Home: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [stockInfo, setStockInfo] = useState<StockInfo | null>(null);
   const [selectedIndicators, setSelectedIndicators] = useState<string[]>([]);
+  const [bottomIndicatorSelected, setBottomIndicatorSelected] = useState<boolean>(false);
 
   const fetchHistoricalData = async () => {
     try {
@@ -124,8 +125,14 @@ const Home: React.FC = () => {
   const handleIndicatorChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { value, checked } = e.target;
     if (checked) {
+      if (value === 'macd' || value === 'rsi') {
+        setBottomIndicatorSelected(true);
+      }
       setSelectedIndicators([...selectedIndicators, value]);
     } else {
+      // if (value === 'macd' || value === 'rsi') {
+      setBottomIndicatorSelected(false);
+      // }
       setSelectedIndicators(selectedIndicators.filter(indicator => indicator !== value));
     }
   };
@@ -146,6 +153,7 @@ const Home: React.FC = () => {
       debouncedFetchData.cancel();
     };
   }, [symbol, interval, startDate, endDate, selectedIndicators, debouncedFetchData]);
+
 
   const handleForecast = async () => {
     try {
@@ -240,7 +248,12 @@ const Home: React.FC = () => {
           </div>
           {error && <p style={{ color: 'red' }}>{error}</p>}
           <div style={{ width: '80%', textAlign: 'center' }}>
-            <StockChart historicalData={historicalData} forecastData={forecastData} selectedIndicators={selectedIndicators} />
+            <StockChart
+              historicalData={historicalData}
+              forecastData={forecastData}
+              selectedIndicators={selectedIndicators}
+              bottomIndicatorSelected={bottomIndicatorSelected}
+            />
           </div>
         </div>
 

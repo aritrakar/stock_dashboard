@@ -41,9 +41,11 @@ interface StockChartProps {
   historicalData: StockData[];
   forecastData: StockData[];
   selectedIndicators: string[];
+  bottomIndicatorSelected?: boolean;
 }
 
-const StockChart: React.FC<StockChartProps> = ({ historicalData, forecastData, selectedIndicators }) => {
+const StockChart: React.FC<StockChartProps> = ({ historicalData, forecastData, selectedIndicators, bottomIndicatorSelected }) => {
+  // const bottomIndicatorSelected = false;
   const stockData = {
     labels: historicalData.map((d) => d.date),
     datasets: [
@@ -185,9 +187,9 @@ const StockChart: React.FC<StockChartProps> = ({ historicalData, forecastData, s
       <div style={{ flex: 1 }}>
         <Line data={stockData} options={stockOptions} />
       </div>
-      <div style={{ flex: 1, height: "25%" }}>
+      {bottomIndicatorSelected && <div style={{ flex: 1, height: "25%" }}>
         <Line data={indicatorData} options={indicatorOptions} />
-      </div>
+      </div>}
     </div>
   );
 };
