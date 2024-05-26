@@ -70,6 +70,12 @@ def fetch_data(symbol, interval, start_date=None, end_date=None, indicators=None
 
 @app.route('/historical', methods=['GET'])
 def get_historical_data():
+    '''
+    Returns historical data for a given stock symbol and interval.
+    Valid intervals are: 1m, 5m, 15m, 1h, 1d due to yfinance limitations.
+    This method does not detect weekends or holidays. So, for example,
+    if you request 1d data on a Saturday, you will get data for Friday.
+    '''
     symbol = request.args.get('symbol')
     interval = request.args.get('interval', '1d')
     start_date = request.args.get('start_date')
@@ -95,6 +101,10 @@ def get_historical_data():
 
 @app.route('/forecast', methods=['POST'])
 def forecast():
+    '''
+    Returns a forecast for a given stock symbol and forecast period (not necessarily days).
+    NOTE: The forecast is not very accurate.
+    '''
     symbol = request.json['symbol']
     interval = request.json.get('interval', '1d')
     start_date = request.json.get('start_date')
@@ -151,6 +161,9 @@ def forecast():
 
 @app.route('/stock-info', methods=['GET'])
 def stock_info():
+    '''
+    Returns information about a stock.
+    '''
     symbol = request.args.get('symbol')
     ticker = yf.Ticker(symbol)
     info = ticker.info

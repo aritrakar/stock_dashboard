@@ -87,7 +87,7 @@ The Stock Forecasting Dashboard is a web application that allows users to visual
 
 4. Start the Flask server:
    ```bash
-   source .env
+   source .env.local
    flask run
    ```
 
@@ -183,6 +183,7 @@ Fetch stock information.
 ## Future Improvements
 
 - **Hosting**: Deploy the application to a cloud platform like Digital Ocean, AWS, GCP, or Heroku.
+  - Configure production server (Gunicorn, Nginx).
 - **Error Handling**: Implement proper error handling and display error messages to the user.
 - **User Authentication**: Implement user authentication to save user preferences and forecasts.
 - **Custom Indicators**: Allow users to customize technical indicators, such as being able to specify the period, color, and other parameters.
