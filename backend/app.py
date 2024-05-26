@@ -1,16 +1,13 @@
+import datetime
 from flask import Flask, request, jsonify
 from flask_cors import CORS
-import yfinance as yf
+from io import StringIO
+import os
 import pandas as pd
+import pandas_ta as ta
 from prophet import Prophet
 import redis
-import json
-import os
-from io import StringIO
-import datetime
-from typing import Any
-import pandas_ta as ta
-import logging
+import yfinance as yf
 
 CACHE_DURATION = 5 * 60  # 5 minutes
 
@@ -78,9 +75,7 @@ def get_historical_data():
     interval = request.args.get('interval', '1d')
     start_date = request.args.get('start_date')
     end_date = request.args.get('end_date')
-    indicators = request.args.getlist('indicators')  # This retrieves indicators as a list
-
-    print("INDICATORS: ", indicators)
+    indicators = request.args.getlist('indicators')
 
     if start_date:
         start_date = datetime.datetime.strptime(start_date, '%Y-%m-%d')
@@ -91,22 +86,22 @@ def get_historical_data():
     cached_data = r.get(cache_key)
 
     if cached_data:
-        print("CACHE HIT")
         data = pd.read_json(StringIO(cached_data.decode('utf-8')), convert_dates=True)
     else:
         data = fetch_data(symbol, interval, start_date, end_date, indicators)
         r.set(cache_key, data.to_json(), ex=CACHE_DURATION)
-        print("STORED IN CACHE")
 
     return data.to_json(orient='records')
 
 
 @app.route('/forecast', methods=['POST'])
 def forecast():
+    print("FORECASTING 1")
     symbol = request.json['symbol']
-    interval = request.json.get('interval', '1d')  # Default to '1d' if not provided
+    interval = request.json.get('interval', '1d')
     start_date = request.json.get('start_date')
     end_date = request.json.get('end_date')
+    indicators = request.json.get('indicators', [])
 
     # Parse dates if provided
     if start_date:
@@ -114,17 +109,19 @@ def forecast():
     if end_date:
         end_date = datetime.datetime.strptime(end_date, '%Y-%m-%d')
 
+    print("FORECASTING 2")
+
     # Check if data is cached
     cache_key = f"{symbol}_{interval}_{start_date}_{end_date}"
     cached_data = r.get(cache_key)
     if cached_data:
-        print("CACHE HIT")
         data = pd.read_json(StringIO(cached_data.decode('utf-8')), convert_dates=True)
+        print("CACHE HIT")
     else:
-        data = fetch_data(symbol, interval, start_date, end_date)
-        r.set(cache_key, data.to_json(), ex=CACHE_DURATION)  # Cache for 5 minutes
-        print("STORED IN CACHE")
+        data = fetch_data(symbol, interval, start_date, end_date, indicators)
+        r.set(cache_key, data.to_json(), ex=CACHE_DURATION)
 
+    print("FORECASTING 3")
     data['ds'] = pd.to_datetime(data['date']).dt.tz_localize(None)  # Remove timezone information
     data['y'] = data['close']
 
@@ -137,12 +134,23 @@ def forecast():
     # Fit the model
     model = Prophet()
     model.fit(data[['ds', 'y']])
-    future = model.make_future_dataframe(periods=30)  # Forecast 30 periods into the future
+    future = model.make_future_dataframe(periods=100)  # Forecast 30 periods into the future
     forecast = model.predict(future)
+
+    print(data.shape, forecast.shape)
+
+    # Remove negative values from the forecast by setting them to adjacent values
+    # forecast['yhat'] = forecast['yhat'].apply(lambda x: max(x, 0))
+
+    # Handle potential edge cases with negative values
+    # for i in range(1, len(forecast)):
+    #     if forecast.loc[i, 'yhat'] < 0:
+    #         forecast.loc[i, 'yhat'] = forecast.loc[i - 1, 'yhat']    
 
     # Convert to original format
     forecast = forecast[['ds', 'yhat']]  # Not included: 'yhat_lower', 'yhat_upper'
     forecast = forecast.rename(columns={'ds': 'date', 'yhat': 'close'})
+    print(forecast.tail())
 
     return forecast.to_json(orient='records')
 

@@ -12,7 +12,7 @@ import {
   LineElement,
 } from 'chart.js';
 import 'chartjs-adapter-date-fns';
-// import { enUS } from 'date-fns/locale';
+import { enUS } from 'date-fns/locale';
 
 ChartJS.register(
   CategoryScale,
@@ -41,13 +41,17 @@ interface StockChartProps {
   historicalData: StockData[];
   forecastData: StockData[];
   selectedIndicators: string[];
-  bottomIndicatorSelected?: boolean;
+  bottomIndicatorSelected: boolean;
 }
 
-const StockChart: React.FC<StockChartProps> = ({ historicalData, forecastData, selectedIndicators, bottomIndicatorSelected }) => {
-  // const bottomIndicatorSelected = false;
+const StockChart: React.FC<StockChartProps> = ({ 
+  historicalData,
+  forecastData,
+  selectedIndicators,
+  bottomIndicatorSelected
+}) => {
   const stockData = {
-    labels: historicalData.map((d) => d.date),
+    labels: (forecastData.length > 0 ? forecastData : historicalData).map((d) => d.date),
     datasets: [
       {
         label: 'Stock Price',
@@ -137,6 +141,11 @@ const StockChart: React.FC<StockChartProps> = ({ historicalData, forecastData, s
             day: 'MMM dd',
           },
         },
+        adapters: {
+          date: {
+            locale: enUS,
+          },
+        },
       },
       'y-axis-1': {
         position: 'left',
@@ -149,7 +158,6 @@ const StockChart: React.FC<StockChartProps> = ({ historicalData, forecastData, s
   };
 
   const indicatorOptions: ChartProps<'line'>['options'] = {
-    // responsive: true,
     maintainAspectRatio: false,
     scales: {
       x: {
@@ -159,6 +167,11 @@ const StockChart: React.FC<StockChartProps> = ({ historicalData, forecastData, s
           tooltipFormat: 'PP',
           displayFormats: {
             day: 'MMM dd',
+          },
+        },
+        adapters: {
+          date: {
+            locale: enUS,
           },
         },
       },

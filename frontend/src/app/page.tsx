@@ -1,12 +1,13 @@
 'use client';
 
-import { useState, useEffect, useCallback, use } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import axios from 'axios';
-import StockChart from './components/StockChart';
 import { debounce } from 'lodash';
 import DatePicker from 'react-datepicker';
 import 'react-datepicker/dist/react-datepicker.css';
 import qs from 'qs';
+
+import StockChart from './components/StockChart';
 
 interface StockData {
   date: string;
@@ -69,7 +70,6 @@ const Home: React.FC = () => {
 
   const fetchHistoricalData = async () => {
     try {
-      console.log("Fetching data. selectedIndicators:", selectedIndicators)
       const response = await axios.get<StockData[]>(`/api/historical`, {
         params: { 
           symbol, 
@@ -81,7 +81,6 @@ const Home: React.FC = () => {
         // Serialize parameters to be able to pass lists
         paramsSerializer: params => qs.stringify(params, { arrayFormat: 'repeat' }),
       });
-      console.log(response.data);
       setHistoricalData(response.data);
       setForecastData([]);  // Clear forecast data when fetching new historical data
     } catch (error) {
@@ -162,7 +161,8 @@ const Home: React.FC = () => {
           symbol, 
           interval, 
           start_date: startDate?.toISOString().split('T')[0],
-          end_date: endDate?.toISOString().split('T')[0]
+          end_date: endDate?.toISOString().split('T')[0],
+          // indicators: selectedIndicators
         },
         {
         headers: {
@@ -186,9 +186,6 @@ const Home: React.FC = () => {
 
   return (
     <div>
-      {/* <div className='w-[100%] flex justify-center items-center'>
-        <h1 className='text-4xl'>Stock Dashboard</h1>
-      </div> */}
       <div style={{ display: 'flex', height: '100vh', padding: '20px', paddingTop: '0', marginTop: '0' }}>
         <div style={{ flex: 3, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '20px' }}>
           <div style={{ marginBottom: '20px', textAlign: 'center' }}>
@@ -261,21 +258,21 @@ const Home: React.FC = () => {
         <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
           {stockInfo ? (
             <div style={{ width: '100%', maxWidth: '350px', padding: '20px', backgroundColor: '#fff', borderLeft: '1px solid #ddd', boxShadow: '0 0 10px rgba(0, 0, 0, 0.1)', borderRadius: '10px', textAlign: 'left' }}>
-              <h1 style={{ fontSize: '2rem', marginBottom: '10px', color: '#333' }}>{stockInfo.name}</h1>
+              <h1 style={{ fontSize: '3rem', marginBottom: '10px', color: '#333' }}>{stockInfo.name}</h1>
               {/* <p style={{ fontSize: '1.5rem', marginBottom: '10px', color: '#555' }}>{stockInfo.description}</p> */}
-              <p style={{ fontSize: '1rem', marginBottom: '0.75rem', color: '#555' }}><strong>Website:</strong> <a href={stockInfo.website} target="_blank" rel="noopener noreferrer">{formatWebsite(stockInfo.website)}</a></p>
-              <p style={{ fontSize: '1rem', marginBottom: '0.75rem', color: '#555' }}><strong>Sector:</strong> {stockInfo.sector}</p>
+              <p style={{ fontSize: '1.5rem', marginBottom: '0.75rem', color: '#555' }}><strong>Website:</strong> <a href={stockInfo.website} target="_blank" rel="noopener noreferrer">{formatWebsite(stockInfo.website)}</a></p>
+              <p style={{ fontSize: '1.5rem', marginBottom: '0.75rem', color: '#555' }}><strong>Sector:</strong> {stockInfo.sector}</p>
 
-              <h2 style={{ fontSize: '1.25rem', marginBottom: '10px', color: '#333' }}>Financials</h2>
-              <p style={{ fontSize: '1rem', marginBottom: '5px', color: '#555' }}><strong>Market Cap:</strong> ${formatNumber(stockInfo.financials.marketCap)}</p>
-              <p style={{ fontSize: '1rem', marginBottom: '5px', color: '#555' }}><strong>EBITDA:</strong> ${formatNumber(stockInfo.financials.ebitda)}</p>
-              <p style={{ fontSize: '1rem', marginBottom: '5px', color: '#555' }}><strong>P/E Ratio:</strong> {stockInfo.financials.peRatio}</p>
-              <p style={{ fontSize: '1rem', marginBottom: '5px', color: '#555' }}><strong>Close:</strong> ${formatNumber(stockInfo.financials.close)}</p>
-              <p style={{ fontSize: '1rem', marginBottom: '5px', color: '#555' }}><strong>Open:</strong> ${formatNumber(stockInfo.financials.open)}</p>
-              <p style={{ fontSize: '1rem', marginBottom: '5px', color: '#555' }}><strong>High:</strong> ${formatNumber(stockInfo.financials.high)}</p>
-              <p style={{ fontSize: '1rem', marginBottom: '5px', color: '#555' }}><strong>Low:</strong> ${formatNumber(stockInfo.financials.low)}</p>
-              <p style={{ fontSize: '1rem', marginBottom: '5px', color: '#555' }}><strong>Volume:</strong> {formatNumber(stockInfo.financials.volume)}</p>
-              <p style={{ fontSize: '1rem', marginBottom: '5px', color: '#555' }}><strong>Pct. Change Today:</strong> {stockInfo.financials.pctChange ?? '-'}%</p>
+              <h2 style={{ fontSize: '2rem', marginBottom: '10px', color: '#333' }}>Financials</h2>
+              <p style={{ fontSize: '1.5rem', marginBottom: '5px', color: '#555' }}><strong>Market Cap:</strong> ${formatNumber(stockInfo.financials.marketCap)}</p>
+              <p style={{ fontSize: '1.5rem', marginBottom: '5px', color: '#555' }}><strong>EBITDA:</strong> ${formatNumber(stockInfo.financials.ebitda)}</p>
+              <p style={{ fontSize: '1.5rem', marginBottom: '5px', color: '#555' }}><strong>P/E Ratio:</strong> {stockInfo.financials.peRatio}</p>
+              <p style={{ fontSize: '1.5rem', marginBottom: '5px', color: '#555' }}><strong>Close:</strong> ${formatNumber(stockInfo.financials.close)}</p>
+              <p style={{ fontSize: '1.5rem', marginBottom: '5px', color: '#555' }}><strong>Open:</strong> ${formatNumber(stockInfo.financials.open)}</p>
+              <p style={{ fontSize: '1.5rem', marginBottom: '5px', color: '#555' }}><strong>High:</strong> ${formatNumber(stockInfo.financials.high)}</p>
+              <p style={{ fontSize: '1.5rem', marginBottom: '5px', color: '#555' }}><strong>Low:</strong> ${formatNumber(stockInfo.financials.low)}</p>
+              <p style={{ fontSize: '1.5rem', marginBottom: '5px', color: '#555' }}><strong>Volume:</strong> {formatNumber(stockInfo.financials.volume)}</p>
+              <p style={{ fontSize: '1.5rem', marginBottom: '5px', color: '#555' }}><strong>Pct. Change Today:</strong> {stockInfo.financials.pctChange ?? '-'}%</p>
             </div>
           ) : (
             <p>Loading stock information...</p>
