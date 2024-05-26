@@ -63,6 +63,7 @@ const Home: React.FC = () => {
   const [interval, setInterval] = useState('1d');  // Default interval
   const [startDate, setStartDate] = useState<Date | null>(null);
   const [endDate, setEndDate] = useState<Date | null>(null);
+  const [forecastPeriod, setForecastPeriod] = useState<number>(30);  // Add forecast period state
   const [error, setError] = useState<string | null>(null);
   const [stockInfo, setStockInfo] = useState<StockInfo | null>(null);
   const [selectedIndicators, setSelectedIndicators] = useState<string[]>([]);
@@ -136,24 +137,6 @@ const Home: React.FC = () => {
     }
   };
 
-  // Create a debounced version of the fetch functions
-  const debouncedFetchData = useCallback(
-    debounce(() => {
-      fetchHistoricalData();
-      fetchStockInfo();
-    }, 500), // Adjust the delay as needed
-    [symbol, interval, startDate, endDate, selectedIndicators]
-  );
-
-  useEffect(() => {
-    debouncedFetchData();
-    // Cancel the debounced function call if the component unmounts
-    return () => {
-      debouncedFetchData.cancel();
-    };
-  }, [symbol, interval, startDate, endDate, selectedIndicators, debouncedFetchData]);
-
-
   const handleForecast = async () => {
     try {
       const response = await axios.post<StockData[]>('/api/forecast', 
@@ -162,6 +145,7 @@ const Home: React.FC = () => {
           interval, 
           start_date: startDate?.toISOString().split('T')[0],
           end_date: endDate?.toISOString().split('T')[0],
+          forecast_period: forecastPeriod,
           indicators: selectedIndicators
         },
         {
@@ -184,11 +168,28 @@ const Home: React.FC = () => {
     }
   };
 
+  // Create a debounced version of the fetch functions
+  const debouncedFetchData = useCallback(
+    debounce(() => {
+      fetchHistoricalData();
+      fetchStockInfo();
+    }, 500),
+    [symbol, interval, startDate, endDate, selectedIndicators]
+  );
+
+  useEffect(() => {
+    debouncedFetchData();
+    // Cancel the debounced function call if the component unmounts
+    return () => {
+      debouncedFetchData.cancel();
+    };
+  }, [symbol, interval, startDate, endDate, selectedIndicators, forecastPeriod, debouncedFetchData]);
+
   return (
     <div>
       <div style={{ display: 'flex', height: '100vh' }}>
         <div style={{ flex: 3, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '0px' }}>
-          <div style={{ marginBottom: '20px', textAlign: 'center' }}>
+          <div style={{ marginBottom: '1em', textAlign: 'center' }}>
             {/* Ticker input */}
             <input
               type="text"
@@ -225,14 +226,23 @@ const Home: React.FC = () => {
               />
             </div>
 
+            {/* Forecast period input */}
+            <input
+              type="number"
+              placeholder="Forecast Period"
+              defaultValue={forecastPeriod}
+              style={{ width:"12%",  marginRight: '10px', padding: '5px', borderRadius: '4px', border: '1px solid #ccc' }}
+              onChange={(e) => setForecastPeriod(Number(e.target.value))}
+            />
+
             {/* Forecast generation button  */}
             <button onClick={handleForecast} style={{ padding: '5px 10px', borderRadius: '4px', backgroundColor: '#007bff', color: '#fff', border: 'none' }}>Generate</button>
           </div>
 
           {/* Technical indicators checkboxes */}
-          <div style={{ marginBottom: '20px', textAlign: 'center' }}>
+          <div style={{ marginBottom: '1em', textAlign: 'center' }}>
             {technicalIndicators.map(indicator => (
-              <label key={indicator.value} style={{ marginRight: '10px' }}>
+              <label key={indicator.value} style={{ marginRight: '0.5em' }}>
                 <input
                   type="checkbox"
                   value={indicator.value}

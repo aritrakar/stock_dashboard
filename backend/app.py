@@ -101,6 +101,7 @@ def forecast():
     start_date = request.json.get('start_date')
     end_date = request.json.get('end_date')
     indicators = request.json.get('indicators', [])
+    forecast_period = request.json.get('forecast_period', 30)
 
     # Parse dates if provided
     if start_date:
@@ -129,7 +130,7 @@ def forecast():
     # Fit the model
     model = Prophet()
     model.fit(data[['ds', 'y']])
-    future = model.make_future_dataframe(periods=100)  # Forecast 30 periods into the future
+    future = model.make_future_dataframe(periods=forecast_period)
     forecast = model.predict(future)
 
     # Remove negative values from the forecast by setting them to adjacent values
