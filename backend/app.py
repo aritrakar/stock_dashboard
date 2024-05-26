@@ -9,6 +9,8 @@ import os
 from io import StringIO
 import datetime
 from typing import Any
+import pandas_ta as ta
+import logging
 
 CACHE_DURATION = 5 * 60  # 5 minutes
 
@@ -20,18 +22,23 @@ redis_host = os.getenv('REDIS_HOST', 'localhost')
 redis_port = os.getenv('REDIS_PORT', 6379)
 r = redis.Redis(host=redis_host, port=int(redis_port), db=0)
 
-def fetch_data(symbol, interval, start_date=None, end_date=None):
+def fetch_data(symbol, interval, start_date=None, end_date=None, indicators=None):
     if end_date is None:
         end_date = datetime.datetime.now()
     if start_date is None:
-        if interval == '1m':
-            start_date = end_date - datetime.timedelta(days=30)
-        elif interval in ['2m', '5m', '15m', '30m', '60m']:
-            start_date = end_date - datetime.timedelta(days=60)
-        else:
-            start_date = end_date - datetime.timedelta(days=365)
+        # Map of intervals to number of days to fetch due to yfinance limitations
+        interval_map = {
+            '1m': 1,
+            '5m': 1,
+            '15m': 7,
+            '30m': 60,
+            '1h': 60,
+            '1d': 365,
+        }
+        
+        start_date = end_date - datetime.timedelta(days=interval_map.get(interval, 30))
 
-    hist = yf.download(tickers=symbol, start=start_date, end=end_date, interval=interval)
+    hist: pd.DataFrame = yf.download(tickers=symbol, start=start_date, end=end_date, interval=interval)
 
     # Clean the data
     hist = hist.reset_index()
@@ -44,37 +51,58 @@ def fetch_data(symbol, interval, start_date=None, end_date=None):
         'Close': 'close',
         'Volume': 'volume'
     })
+
+    # Compute additional indicators if requested
+    if indicators:
+        for indicator in indicators:
+            if indicator == 'sma':
+                hist["SMA"] = ta.sma(hist['close'], length=14)
+            if indicator == 'ema':
+                hist["EMA"] = ta.ema(hist['close'], length=14)
+            if indicator == 'rsi':
+                hist["RSI"] = ta.rsi(hist['close'], length=14)
+            if indicator == 'macd':
+                macd = ta.macd(hist['close'], fast=12, slow=26, signal=9)
+                hist["MACD"] = macd['MACD_12_26_9']
+            if indicator == 'bbands':
+                bbands = ta.bbands(hist['close'], length=20)
+                print(bbands.columns)
+                print(bbands)
+                hist["BB_UPPER"], hist["BB_MIDDLE"], hist["BB_LOWER"] = bbands['BBU_20_2.0'], bbands['BBM_20_2.0'], bbands['BBL_20_2.0']
+
     return hist
 
 @app.route('/historical', methods=['GET'])
 def get_historical_data():
     symbol = request.args.get('symbol')
-    interval = request.args.get('interval', '1d')  # Default to '1d' if not provided
+    interval = request.args.get('interval', '1d')
     start_date = request.args.get('start_date')
     end_date = request.args.get('end_date')
+    indicators = request.args.getlist('indicators')  # This retrieves indicators as a list
 
-    # Parse dates if provided
+    print("INDICATORS: ", indicators)
+
     if start_date:
         start_date = datetime.datetime.strptime(start_date, '%Y-%m-%d')
     if end_date:
         end_date = datetime.datetime.strptime(end_date, '%Y-%m-%d')
 
-    # Check if data is cached
-    cache_key = f"{symbol}_{interval}_{start_date}_{end_date}"
+    cache_key = f"{symbol}_{interval}_{start_date}_{end_date}_{'_'.join(indicators)}"
     cached_data = r.get(cache_key)
+
     if cached_data:
         print("CACHE HIT")
         data = pd.read_json(StringIO(cached_data.decode('utf-8')), convert_dates=True)
     else:
-        data = fetch_data(symbol, interval, start_date, end_date)
-        r.set(cache_key, data.to_json(), ex=CACHE_DURATION)  # Cache for 5 minutes
+        data = fetch_data(symbol, interval, start_date, end_date, indicators)
+        r.set(cache_key, data.to_json(), ex=CACHE_DURATION)
         print("STORED IN CACHE")
 
     return data.to_json(orient='records')
 
+
 @app.route('/forecast', methods=['POST'])
 def forecast():
-    print("FORECASTING")
     symbol = request.json['symbol']
     interval = request.json.get('interval', '1d')  # Default to '1d' if not provided
     start_date = request.json.get('start_date')
