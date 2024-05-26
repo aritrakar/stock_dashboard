@@ -76,7 +76,7 @@ const Home: React.FC = () => {
           interval, 
           start_date: startDate?.toISOString().split('T')[0],
           end_date: endDate?.toISOString().split('T')[0],
-          indicators: selectedIndicators  // Include selected indicators
+          indicators: selectedIndicators 
         },
         // Serialize parameters to be able to pass lists
         paramsSerializer: params => qs.stringify(params, { arrayFormat: 'repeat' }),
@@ -162,7 +162,7 @@ const Home: React.FC = () => {
           interval, 
           start_date: startDate?.toISOString().split('T')[0],
           end_date: endDate?.toISOString().split('T')[0],
-          // indicators: selectedIndicators
+          indicators: selectedIndicators
         },
         {
         headers: {
@@ -186,8 +186,8 @@ const Home: React.FC = () => {
 
   return (
     <div>
-      <div style={{ display: 'flex', height: '100vh', padding: '20px', paddingTop: '0', marginTop: '0' }}>
-        <div style={{ flex: 3, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '20px' }}>
+      <div style={{ display: 'flex', height: '100vh' }}>
+        <div style={{ flex: 3, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '0px' }}>
           <div style={{ marginBottom: '20px', textAlign: 'center' }}>
             {/* Ticker input */}
             <input
@@ -203,7 +203,6 @@ const Home: React.FC = () => {
               <option value="1m">1 Minute</option>
               <option value="5m">5 Minutes</option>
               <option value="15m">15 Minutes</option>
-              {/* <option value="30m">30 Minutes</option> */}
               <option value="1h">1 Hour</option>
               <option value="1d">1 Day</option>
             </select>
@@ -230,7 +229,7 @@ const Home: React.FC = () => {
             <button onClick={handleForecast} style={{ padding: '5px 10px', borderRadius: '4px', backgroundColor: '#007bff', color: '#fff', border: 'none' }}>Generate</button>
           </div>
 
-          {/* Technical indicators */}
+          {/* Technical indicators checkboxes */}
           <div style={{ marginBottom: '20px', textAlign: 'center' }}>
             {technicalIndicators.map(indicator => (
               <label key={indicator.value} style={{ marginRight: '10px' }}>
@@ -243,8 +242,12 @@ const Home: React.FC = () => {
               </label>
             ))}
           </div>
+            
+          {/* Error message */}
           {error && <p style={{ color: 'red' }}>{error}</p>}
-          <div style={{ width: '80%', textAlign: 'center' }}>
+
+          {/* Stock chart */}
+          <div style={{ width: '90%', textAlign: 'center' }}>
             <StockChart
               historicalData={historicalData}
               forecastData={forecastData}
@@ -255,7 +258,7 @@ const Home: React.FC = () => {
         </div>
 
         {/* Stock information card */}
-        <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <div style={{ flex: 1, padding: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
           {stockInfo ? (
             <div style={{ width: '100%', maxWidth: '350px', padding: '20px', backgroundColor: '#fff', borderLeft: '1px solid #ddd', boxShadow: '0 0 10px rgba(0, 0, 0, 0.1)', borderRadius: '10px', textAlign: 'left' }}>
               <h1 style={{ fontSize: '3rem', marginBottom: '10px', color: '#333' }}>{stockInfo.name}</h1>

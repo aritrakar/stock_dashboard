@@ -96,7 +96,6 @@ def get_historical_data():
 
 @app.route('/forecast', methods=['POST'])
 def forecast():
-    print("FORECASTING 1")
     symbol = request.json['symbol']
     interval = request.json.get('interval', '1d')
     start_date = request.json.get('start_date')
@@ -109,19 +108,15 @@ def forecast():
     if end_date:
         end_date = datetime.datetime.strptime(end_date, '%Y-%m-%d')
 
-    print("FORECASTING 2")
-
     # Check if data is cached
     cache_key = f"{symbol}_{interval}_{start_date}_{end_date}"
     cached_data = r.get(cache_key)
     if cached_data:
         data = pd.read_json(StringIO(cached_data.decode('utf-8')), convert_dates=True)
-        print("CACHE HIT")
     else:
         data = fetch_data(symbol, interval, start_date, end_date, indicators)
         r.set(cache_key, data.to_json(), ex=CACHE_DURATION)
 
-    print("FORECASTING 3")
     data['ds'] = pd.to_datetime(data['date']).dt.tz_localize(None)  # Remove timezone information
     data['y'] = data['close']
 
@@ -137,8 +132,6 @@ def forecast():
     future = model.make_future_dataframe(periods=100)  # Forecast 30 periods into the future
     forecast = model.predict(future)
 
-    print(data.shape, forecast.shape)
-
     # Remove negative values from the forecast by setting them to adjacent values
     # forecast['yhat'] = forecast['yhat'].apply(lambda x: max(x, 0))
 
@@ -150,7 +143,6 @@ def forecast():
     # Convert to original format
     forecast = forecast[['ds', 'yhat']]  # Not included: 'yhat_lower', 'yhat_upper'
     forecast = forecast.rename(columns={'ds': 'date', 'yhat': 'close'})
-    print(forecast.tail())
 
     return forecast.to_json(orient='records')
 
