@@ -11,6 +11,12 @@ The Stock Forecasting Dashboard is a web application that allows users to visual
 - **Technical Indicators**: Visualize technical indicators including (14 period) SMA, EMA, RSI, MACD, and Bollinger Bands.
 - **Interactive UI**: Select stock symbols, time intervals, start and end dates, and technical indicators through an intuitive interface.
 
+## Screenshots
+
+![Bollinger bands, RSI, forecast](etc/indicators_with_forecast.png)
+
+![Date range + EMA](etc/date_range_ema.png)
+
 ## Technologies Used
 
 - **Frontend**:
@@ -81,6 +87,7 @@ The Stock Forecasting Dashboard is a web application that allows users to visual
 
 4. Start the Flask server:
    ```bash
+   source .env
    flask run
    ```
 
@@ -172,6 +179,17 @@ Fetch stock information.
 - `start_date` (string): Start date in `YYYY-MM-DD` format.
 - `end_date` (string): End date in `YYYY-MM-DD` format.
 - `indicators` (array): List of technical indicators to include.
+
+## Future Improvements
+
+- **Hosting**: Deploy the application to a cloud platform like Digital Ocean, AWS, GCP, or Heroku.
+- **Error Handling**: Implement proper error handling and display error messages to the user.
+- **User Authentication**: Implement user authentication to save user preferences and forecasts.
+- **Custom Indicators**: Allow users to customize technical indicators, such as being able to specify the period, color, and other parameters.
+- **Multiple Stock Symbols**: Support multiple stock symbols in a single chart.
+- **Custom Forecasting Models**: Allow users to choose different forecasting models (e.g., ARIMA, LSTM).
+- **Real-time Data**: Fetch real-time stock data and update the charts in real-time. This requires a WebSocket connection to the backend and a data source that provides real-time data.
+- **Responsive Design**: Make the application responsive for mobile devices.
 
 ## License
 

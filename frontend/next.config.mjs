@@ -1,5 +1,7 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+    reactStrictMode: true,
+    swcMinify: true,
     // Fix for CORS: Maps incoming requests to a different path, in this case, the backend URL
     async rewrites() {
         return [

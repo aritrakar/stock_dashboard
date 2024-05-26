@@ -1,6 +1,7 @@
 import datetime
 from flask import Flask, request, jsonify
 from flask_cors import CORS
+from flask_talisman import Talisman
 from io import StringIO
 import os
 import pandas as pd
@@ -12,8 +13,8 @@ import yfinance as yf
 CACHE_DURATION = 5 * 60  # 5 minutes
 
 app = Flask(__name__)
-CORS(app)
-app.config['ENV'] = 'development'
+CORS(app) # Enable CORS
+Talisman(app) # Secure app with Talisman
 
 redis_host = os.getenv('REDIS_HOST', 'localhost')
 redis_port = os.getenv('REDIS_PORT', 6379)
@@ -63,8 +64,6 @@ def fetch_data(symbol, interval, start_date=None, end_date=None, indicators=None
                 hist["MACD"] = macd['MACD_12_26_9']
             if indicator == 'bbands':
                 bbands = ta.bbands(hist['close'], length=20)
-                print(bbands.columns)
-                print(bbands)
                 hist["BB_UPPER"], hist["BB_MIDDLE"], hist["BB_LOWER"] = bbands['BBU_20_2.0'], bbands['BBM_20_2.0'], bbands['BBL_20_2.0']
 
     return hist
@@ -174,4 +173,4 @@ def stock_info():
     return jsonify(stock_info)
 
 if __name__ == '__main__':
-    app.run(host='0.0.0.0', port=5000, debug=True)
+    app.run(host='0.0.0.0', port=5000, debug=True) # Only for development
