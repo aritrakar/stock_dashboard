@@ -1,0 +1,100 @@
+# name: CI/CD Pipeline
+
+# on:
+#   push:
+#     branches:
+#       - main
+#   pull_request:
+#     branches:
+#       - main
+
+# jobs:
+#   build:
+#     runs-on: ubuntu-latest
+
+#     services:
+#       redis:
+#         image: redis:alpine
+#         ports:
+#           - 6379:6379
+
+#     steps:
+#       - name: Checkout code
+#         uses: actions/checkout@v3
+
+#       - name: Set up Docker Buildx
+#         uses: docker/setup-buildx-action@v1
+
+#       - name: Set up Docker
+#         uses: docker/setup-qemu-action@v1
+
+#       - name: Cache Docker layers
+#         uses: actions/cache@v3
+#         with:
+#           path: /tmp/.buildx-cache
+#           key: ${{ runner.os }}-buildx-${{ github.sha }}
+#           restore-keys: |
+#             ${{ runner.os }}-buildx-
+
+#       - name: Build and push Docker images
+#         run: docker-compose -f docker-compose.yml build --parallel
+
+#       - name: Run Docker Compose
+#         run: docker-compose -f docker-compose.yml up -d
+
+#       # - name: Wait for services to be ready
+#       #   run: |
+#       #     sleep 30
+#       #     docker-compose ps
+
+name: CI/CD Pipeline
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v1
+
+      - name: Cache Docker layers
+        uses: actions/cache@v2
+        with:
+          path: /tmp/.buildx-cache
+          key: ${{ runner.os }}-buildx-${{ github.sha }}
+          restore-keys: |
+            ${{ runner.os }}-buildx-
+
+      - name: Set up Docker Compose
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y docker-compose
+
+      - name: Build Docker containers
+        run: docker-compose -f docker-compose.yml build --parallel
+
+      - name: Run Docker Compose
+        run: docker-compose -f docker-compose.yml up -d
+
+      - name: Wait for services to be ready
+        run: |
+          sleep 30
+          docker-compose ps
+
+      - name: Check service status
+        run: docker-compose ps
+
+      - name: Teardown
+        if: always()
+        run: docker-compose down
