@@ -131,7 +131,8 @@ const Home: React.FC = () => {
       setSelectedIndicators([...selectedIndicators, value]);
     } else {
       // If selectedIndicators does not contain any of the bottom indicators
-      if (!(selectedIndicators.includes('macd') || selectedIndicators.includes('rsi'))) {
+      if ((value == 'macd' && !selectedIndicators.includes('rsi')) || 
+          (value == 'rsi' && !selectedIndicators.includes('macd'))) {
         setBottomIndicatorSelected(false);
       }
       setSelectedIndicators(selectedIndicators.filter(indicator => indicator !== value));
