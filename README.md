@@ -34,8 +34,10 @@ The Stock Forecasting Dashboard is a web application that allows users to visual
   - [TA-Lib](https://mrjbq7.github.io/ta-lib/) - Technical Analysis Library for Python.
   - [Redis](https://redis.io/) - In-memory data structure store for caching.
 
-- **Docker**:
-  - Containerization of the frontend, backend, and Redis services.
+- **CI/CD**:
+  - [Docker](https://www.docker.com/) - Containerization of the frontend, backend, and Redis services.
+  - [Docker compose](https://docs.docker.com/compose/) - Multi-container Docker applications.
+  - GitHub Actions: Automated deployment testing.
 
 ## Installation
 
