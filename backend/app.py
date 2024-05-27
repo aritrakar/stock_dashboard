@@ -61,10 +61,18 @@ def fetch_data(symbol, interval, start_date=None, end_date=None, indicators=None
                 hist["RSI"] = ta.rsi(hist['close'], length=14)
             if indicator == 'macd':
                 macd = ta.macd(hist['close'], fast=12, slow=26, signal=9)
-                hist["MACD"] = macd['MACD_12_26_9']
+                if 'MACD_12_26_9' in macd:
+                    hist["MACD"] = macd['MACD_12_26_9']
+                else:
+                    # Error. MACD likely not available due to invalid time period.
+                    hist["MACD"] = []
             if indicator == 'bbands':
                 bbands = ta.bbands(hist['close'], length=20)
-                hist["BB_UPPER"], hist["BB_MIDDLE"], hist["BB_LOWER"] = bbands['BBU_20_2.0'], bbands['BBM_20_2.0'], bbands['BBL_20_2.0']
+                if "BBU_20_2.0" in bbands and "BBM_20_2.0" in bbands and "BBL_20_2.0" in bbands:
+                    hist["BB_UPPER"], hist["BB_MIDDLE"], hist["BB_LOWER"] = bbands['BBU_20_2.0'], bbands['BBM_20_2.0'], bbands['BBL_20_2.0']
+                else:
+                    # Error. Bollinger Bands likely not available due to invalid time period.
+                    hist["BB_UPPER"], hist["BB_MIDDLE"], hist["BB_LOWER"] = [], [], []
 
     return hist
 
